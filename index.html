@@ -1,138 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Anime Quiz — Cyberpunk</title>
+<style>
+  :root{
+    --neon:#00d7ff;
+    --panel:#041028;
+    --accent:#00ffe1;
+    --good:#7CFC00;
+    --bad:#ff4c4c;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:#030616;color:#e6f7ff}
+  /* background glow */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    background:
+      radial-gradient(40% 40% at 10% 10%, rgba(0,215,255,0.06), transparent 10%),
+      radial-gradient(50% 50% at 90% 80%, rgba(0,150,255,0.06), transparent 12%),
+      linear-gradient(180deg,#041028 0%, #000814 100%);
+    z-index:-2;
+  }
+  header{padding:28px 12px;text-align:center}
+  h1{margin:0;font-size:34px;letter-spacing:1px;color:var(--neon);text-shadow:0 0 18px rgba(0,215,255,0.25)}
+  .container{
+    width:94%;
+    max-width:680px;
+    margin:18px auto 60px;
+    background:linear-gradient(180deg, rgba(3,12,30,0.7), rgba(2,6,18,0.6));
+    border:1px solid rgba(0,215,255,0.12);
+    box-shadow:0 10px 40px rgba(0,20,40,0.6), 0 0 30px rgba(0,215,255,0.04);
+    border-radius:12px;
+    padding:20px;
+    backdrop-filter: blur(6px);
+  }
+  #question{font-size:20px;margin:6px 0 18px;color:#e9fbff}
+  #meta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .pill{padding:6px 10px;border-radius:10px;background:rgba(0,215,255,0.04);border:1px solid rgba(0,215,255,0.06);font-size:14px;color:var(--neon)}
+  #timer{font-weight:700;color:#8bf0ff}
+  #options{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .option{
+    padding:12px 14px;border-radius:8px;background:rgba(4,12,30,0.6);
+    border:1px solid rgba(0,215,255,0.06);cursor:pointer;color:#dff9ff;font-weight:600;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s;
+    box-shadow:0 6px 18px rgba(0,0,0,0.4);
+  }
+  .option:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,0.5)}
+  .option.disabled{pointer-events:none;opacity:.6;transform:none}
+  .option.correct{background:linear-gradient(90deg,#073,#0f6);color:#001100;box-shadow:0 8px 30px rgba(0,255,170,0.08)}
+  .option.wrong{background:linear-gradient(90deg,#520000,#8a0000);color:#fff;box-shadow:0 8px 30px rgba(255,0,0,0.06)}
+  #result{height:34px;margin-top:14px;font-weight:700;font-size:18px}
+  #scorebar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
+  #scorebar .small{font-size:14px;color:#bfefff}
+  #nextBtn{
+    margin-top:14px;padding:10px 18px;border-radius:10px;border:none;background:var(--neon);color:#001820;cursor:pointer;font-weight:700;
+    box-shadow:0 10px 30px rgba(0,215,255,0.12);
+  }
+  #nextBtn:disabled{opacity:.5;cursor:not-allowed}
+  /* Sugoi big text */
+  #sugoi{
+    position:fixed;left:50%;top:20%;transform:translateX(-50%);z-index:9999;
+    font-size:84px;color:#a7fff7;text-shadow:0 0 30px #00f2ff, 0 0 60px #00b4ff;display:none;
+  }
+  /* responsive */
+  @media (max-width:520px){
+    .container{padding:14px}
+    h1{font-size:26px}
+    #sugoi{font-size:44px;top:12%}
+  }
+</style>
+</head>
+<body>
+
+<header><h1>Anime Quiz — Cyberpunk Blue</h1></header>
+
+<div class="container" role="main">
+  <div id="meta">
+    <div class="pill" id="qcount">Question 1 / 30</div>
+    <div class="pill" id="timer">Time: 10s</div>
+  </div>
+
+  <div id="question">Loading question...</div>
+
+  <div id="options" aria-live="polite"></div>
+
+  <div id="result" aria-live="polite"></div>
+
+  <div id="scorebar">
+    <div class="small">Score: <span id="score">0</span></div>
+    <div class="small">Streak: <span id="streak">0</span> | Best: <span id="best">0</span></div>
+  </div>
+
+  <button id="nextBtn" disabled>Next</button>
+</div>
+
+<div id="sugoi">すごい！</div>
+
 <script>
+/* 30 anime questions - straightforward format */
 const questions = [
-  {q:"Who is the main character of Naruto?", a:"Naruto Uzumaki", o:["Sasuke","Naruto Uzumaki","Kakashi","Neji"]},
-  {q:"Who owns the Sharingan?", a:"Uchiha Clan", o:["Senju","Uzuzmaki","Uchiha Clan","Hyuga"]},
-  {q:"What is Luffy's power?", a:"Rubber", o:["Fire","Ice","Rubber","Lightning"]},
-  {q:"Who is the strongest in One Punch Man?", a:"Saitama", o:["Genos","Saitama","Boros","Flashy Flash"]},
-  {q:"What does Goku turn into?", a:"Super Saiyan", o:["Titan","Hollow","Super Saiyan","Ghoul"]},
-  {q:"What anime has Titans?", a:"Attack on Titan", o:["Bleach","Attack on Titan","Naruto","Demon Slayer"]},
-  {q:"Who uses a water breathing sword?", a:"Tanjiro", o:["Levi","Tanjiro","Ichigo","Asta"]},
-  {q:"What's Deku's real name?", a:"Izuku Midoriya", o:["Deku","Izuku Midoriya","Katsuki","Shigaraki"]},
-  {q:"What anime has Bankai?", a:"Bleach", o:["One Piece","Bleach","AOT","JJK"]},
-  {q:"Who is Gojo's student?", a:"Yuji Itadori", o:["Megumi","Yuji Itadori","Sukuna","Yuta"]},
-  // ... (your other 30 questions stay unchanged)
+  {q:"Who is the main protagonist of 'Naruto'?", a:"Naruto Uzumaki", o:["Sasuke Uchiha","Naruto Uzumaki","Kakashi Hatake","Itachi Uchiha"]},
+  {q:"Which show features the 'Sharingan'?", a:"Naruto", o:["One Piece","Dragon Ball","Naruto","Bleach"]},
+  {q:"Who is the protagonist of 'One Punch Man'?", a:"Saitama", o:["Tatsumaki","Saitama","Genos","Speed-o'-Sound Sonic"]},
+  {q:"Which anime centers on giant humanoid Titans?", a:"Attack on Titan", o:["Fullmetal Alchemist","Attack on Titan","Naruto","Demon Slayer"]},
+  {q:"What is the name of Luffy's pirate crew?", a:"Straw Hat Pirates", o:["Whitebeard Crew","Straw Hat Pirates","Blackbeard Crew","Red Hair Pirates"]},
+  {q:"Who uses the 'Rasengan' technique?", a:"Naruto", o:["Sasuke","Naruto","Rock Lee","Kakashi"]},
+  {q:"What is Goku's signature transformation?", a:"Super Saiyan", o:["Titan Form","Bankai","Super Saiyan","Gear Fourth"]},
+  {q:"Which anime features 'Quirks'?", a:"My Hero Academia", o:["Hunter x Hunter","My Hero Academia","Bleach","One Piece"]},
+  {q:"Who is the main of 'Death Note' (the human user)?", a:"Light Yagami", o:["L","Light Yagami","Near","Mello"]},
+  {q:"Which anime features 'Nen' abilities?", a:"Hunter x Hunter", o:["Naruto","Hunter x Hunter","Demon Slayer","Bleach"]},
+  {q:"Who is the girl turned demon sister in 'Demon Slayer'?", a:"Nezuko", o:["Nezuko","Mitsuri","Kanao","Shinobu"]},
+  {q:"Which series has 'Bankai' powers?", a:"Bleach", o:["One Piece","Bleach","Naruto","Dragon Ball"]},
+  {q:"Who commands 'Zanpakuto' in Bleach?", a:"Soul Reaper captains", a_alt:"Soul Reaper captains", o:["Ninja clans","Pirate captains","Soul Reaper captains","Demon slayers"]},
+  {q:"Who is the protagonist of 'Fullmetal Alchemist'?", a:"Edward Elric", o:["Alphonse Elric","Edward Elric","Roy Mustang","Scar"]},
+  {q:"Which anime has 'Cursed Energy' and 'Cursed Techniques'?", a:"Jujutsu Kaisen", o:["Jujutsu Kaisen","One Piece","Fairy Tail","Mob Psycho"]},
+  {q:"Who is known as the 'Pirate King'?", a:"Gol D. Roger", o:["Blackbeard","Gol D. Roger","Shanks","Kaido"]},
+  {q:"Which anime features a 'Death Game' premise similar to deadly games?", a:"Darwin's Game", o:["Naruto","Darwin's Game","Bleach","Gintama"]},
+  {q:"Who is 'Deku' in My Hero Academia?", a:"Izuku Midoriya", o:["Katsuki Bakugo","Izuku Midoriya","Shoto Todoroki","All Might"]},
+  {q:"What power does Killua often use?", a:"Electricity (Godspeed)", o:["Fire","Ice","Electricity (Godspeed)","Water"]},
+  {q:"Which anime has the 'Titans' and 'Survey Corps'?", a:"Attack on Titan", o:["Bleach","Attack on Titan","JoJo","Dragon Ball"]},
+  {q:"Who wields 'Soul Reaper' powers?", a:"Ichigo Kurosaki", a_alt:"Ichigo Kurosaki", o:["Luffy","Ichigo Kurosaki","Naruto","Gon"]},
+  {q:"What is the main currency in many anime gacha games commonly called?", a:"Gems or Crystals", o:["Coins only","Gems or Crystals","Stones only","Shards only"]},
+  {q:"Who is the protagonist of 'Tokyo Ghoul'?", a:"Ken Kaneki", o:["Ken Kaneki","Eren Yeager","Denji","Izuku"]},
+  {q:"Which anime centers around magical grimoires and anti-magic?", a:"Black Clover", o:["Black Clover","Demon Slayer","One Piece","Naruto"]},
+  {q:"Who is the 'Hunter' boy Gon befriends?", a:"Killua", o:["Leorio","Killua","Kurapika","Hisoka"]},
+  {q:"Which anime features 'Stand' powers?", a:"JoJo's Bizarre Adventure", o:["JoJo's Bizarre Adventure","Bleach","Naruto","Dragon Ball"]},
+  {q:"Who is the chainsaw devil's human host?", a:"Denji", o:["Denji","Aki","Makima","Power"]},
+  {q:"Which anime features 'Alchemy' as core mechanic?", a:"Fullmetal Alchemist", o:["Fullmetal Alchemist","Bleach","One Piece","Hunter x Hunter"]},
+  {q:"Which anime features 'Shinigami' and soul society?", a:"Bleach", o:["Naruto","Bleach","My Hero Academia","Dragon Ball"]},
+  {q:"Who is the comedic, bald martial artist in One Punch Man?", a:"Saitama", o:["Saitama","Genos","Tatsumaki","King"]},
 ];
 
-// ===============================
-//   NEW VARIABLES FOR STREAK
-// ===============================
-let index = 0;
-let streak = 0;
-let highestStreak = localStorage.getItem("animeQuizStreak") || 0;
-
-// Put streak display on screen
-document.addEventListener("DOMContentLoaded", () => {
-  const box = document.querySelector(".container");
-  const streakBox = document.createElement("p");
-  streakBox.id = "streakBox";
-  streakBox.style.marginTop = "20px";
-  streakBox.style.fontSize = "18px";
-  streakBox.innerHTML = `
-    Current Streak: <span id="currentStreak">${streak}</span><br>
-    Highest Streak: <span id="highStreak">${highestStreak}</span>
-  `;
-  box.appendChild(streakBox);
-});
-
-// Explosion effect DIV
-const explosion = document.createElement("div");
-explosion.id = "explosionEffect";
-explosion.style.position = "fixed";
-explosion.style.top = "0";
-explosion.style.left = "0";
-explosion.style.width = "100%";
-explosion.style.height = "100%";
-explosion.style.background = "radial-gradient(circle, #00eaff, #005577, #000)";
-explosion.style.display = "none";
-explosion.style.zIndex = "9999";
-explosion.style.animation = "explode 0.6s ease-out";
-document.body.appendChild(explosion);
-
-// Explosion Keyframe
-const style = document.createElement("style");
-style.innerHTML = `
-@keyframes explode {
-  0% { opacity: 0; transform: scale(0.5); filter:brightness(1.2); }
-  50% { opacity: 1; transform: scale(1.4); filter:brightness(2); }
-  100% { opacity: 0; transform: scale(2); filter:brightness(1); }
-}`;
-document.head.appendChild(style);
-
-// ===============================
-//      LOAD QUESTION
-// ===============================
-function load() {
-  document.getElementById("celebrate").style.display = "none";
-  let q = questions[index];
-  document.getElementById("question").innerText = q.q;
-
-  let box = document.getElementById("options");
-  box.innerHTML = "";
-  q.o.forEach(op => {
-    let btn = document.createElement("div");
-    btn.className = "option";
-    btn.innerText = op;
-    btn.onclick = () => check(op);
-    box.appendChild(btn);
-  });
-}
-
-// ===============================
-//      CHECK ANSWER
-// ===============================
-function check(choice) {
-  let correct = questions[index].a;
-  let result = document.getElementById("result");
-
-  if (choice === correct) {
-    result.style.color = "lime";
-    result.innerText = "Good";
-    streak++;
-
-    // Update streak display
-    document.getElementById("currentStreak").innerText = streak;
-
-    // Celebration at 4 streak (Sugoi!)
-    if (streak === 4) {
-      document.getElementById("celebrate").style.display = "block";
-    }
-
-    // NEW: Beat highest streak?
-    if (streak > highestStreak) {
-      highestStreak = streak;
-      localStorage.setItem("animeQuizStreak", highestStreak);
-      document.getElementById("highStreak").innerText = highestStreak;
-      triggerExplosion();
-    }
-
-  } else {
-    result.style.color = "red";
-    result.innerText = "Try Again";
-    streak = 0;
-    document.getElementById("currentStreak").innerText = 0;
+/* shuffle questions order once per session */
+function shuffleArray(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
   }
 }
+shuffleArray(questions);
 
-// ===============================
-//   EXPLOSION CELEBRATION
-// ===============================
-function triggerExplosion() {
-  explosion.style.display = "block";
-  setTimeout(() => {
-    explosion.style.display = "none";
-  }, 600);
+/* state */
+let idx = 0;
+let score = 0;
+let streak = 0;
+let best = Number(localStorage.getItem('animeQuizBest') || 0);
+let timeLeft = 10;
+let timerInterval = null;
+
+/* DOM refs */
+const qcountEl = document.getElementById('qcount');
+const timerEl = document.getElementById('timer');
+const questionEl = document.getElementById('question');
+const optionsEl = document.getElementById('options');
+const resultEl = document.getElementById('result');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+const bestEl = document.getElementById('best');
+const nextBtn = document.getElementById('nextBtn');
+const sugoiEl = document.getElementById('sugoi');
+
+/* initial UI */
+scoreEl.innerText = score;
+streakEl.innerText = streak;
+bestEl.innerText = best;
+
+/* functions */
+function startTimer(){
+  clearInterval(timerInterval);
+  timeLeft = 10;
+  timerEl.innerText = `Time: ${timeLeft}s`;
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    timerEl.innerText = `Time: ${timeLeft}s`;
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      handleTimeout();
+    }
+  },1000);
 }
 
-// ===============================
-//      NEXT QUESTION
-// ===============================
-function nextQuestion() {
-  index++;
-  if (index >= questions.length) index = 0;
+function loadQuestion(){
+  // clamp idx
+  if(idx >= questions.length) idx = 0;
+  const q = questions[idx];
+  qcountEl.innerText = `Question ${idx+1} / ${questions.length}`;
+  questionEl.innerText = q.q;
 
-  document.getElementById("result").innerText = "";
-  load();
+  optionsEl.innerHTML = "";
+  // shuffle copy of options so correct not always same place
+  const opts = q.o.slice();
+  shuffleArray(opts);
+  for(const opt of opts){
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerText = opt;
+    div.tabIndex = 0;
+    div.addEventListener('click', ()=> onChoose(opt, div));
+    div.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') onChoose(opt, div); });
+    optionsEl.appendChild(div);
+  }
+  resultEl.innerText = "";
+  nextBtn.disabled = true;
+  startTimer();
 }
 
-load();
+function onChoose(choice, elem){
+  // prevent double clicks
+  if(elem.classList.contains('disabled')) return;
+  // disable all options
+  Array.from(optionsEl.children).forEach(x=>x.classList.add('disabled'));
+  clearInterval(timerInterval);
+
+  const correct = questions[idx].a;
+  if(choice === correct){
+    // mark correct
+    elem.classList.add('correct');
+    resultEl.style.color = 'var(--good)';
+    resultEl.innerText = 'Good';
+    score++;
+    streak++;
+    // show sugoi if 4 in a row
+    if(streak === 4){
+      showSugoi();
+      // reset streak display after short show OR keep continuing? We'll keep counting
+      setTimeout(()=>{ sugoiEl.style.display = 'none'; }, 1400);
+    }
+    // update best if beaten
+    if(streak > best){
+      best = streak;
+      localStorage.setItem('animeQuizBest', best);
+      bestEl.innerText = best;
+      // no explosion per request
+    }
+  } else {
+    // wrong
+    elem.classList.add('wrong');
+    resultEl.style.color = 'var(--bad)';
+    resultEl.innerText = 'Try Again';
+    streak = 0;
+  }
+  // update scoreboard
+  scoreEl.innerText = score;
+  streakEl.innerText = streak;
+  // reveal correct option highlight if not selected
+  Array.from(optionsEl.children).forEach(child=>{
+    if(child.innerText === correct) child.classList.add('correct');
+  });
+  nextBtn.disabled = false;
+}
+
+function handleTimeout(){
+  // mark as wrong
+  resultEl.style.color = 'var(--bad)';
+  resultEl.innerText = "Try Again (time)";
+  // disable options
+  Array.from(optionsEl.children).forEach(x=>x.classList.add('disabled'));
+  streak = 0;
+  streakEl.innerText = streak;
+  nextBtn.disabled = false;
+}
+
+function nextQuestion(){
+  idx++;
+  loadQuestion();
+}
+
+/* sugOI display */
+function showSugoi(){
+  sugoiEl.style.display = 'block';
+  // small pulse then hide handled elsewhere
+}
+
+/* keyboard: N for next */
+document.addEventListener('keydown',(e)=>{
+  if(e.key.toLowerCase() === 'n' && !nextBtn.disabled){
+    nextQuestion();
+  }
+});
+
+/* next button handler */
+nextBtn.addEventListener('click', nextQuestion);
+
+/* start */
+loadQuestion();
 </script>
+</body>
+</html>

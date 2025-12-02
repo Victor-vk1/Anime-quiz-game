@@ -1,0 +1,138 @@
+<script>
+const questions = [
+  {q:"Who is the main character of Naruto?", a:"Naruto Uzumaki", o:["Sasuke","Naruto Uzumaki","Kakashi","Neji"]},
+  {q:"Who owns the Sharingan?", a:"Uchiha Clan", o:["Senju","Uzuzmaki","Uchiha Clan","Hyuga"]},
+  {q:"What is Luffy's power?", a:"Rubber", o:["Fire","Ice","Rubber","Lightning"]},
+  {q:"Who is the strongest in One Punch Man?", a:"Saitama", o:["Genos","Saitama","Boros","Flashy Flash"]},
+  {q:"What does Goku turn into?", a:"Super Saiyan", o:["Titan","Hollow","Super Saiyan","Ghoul"]},
+  {q:"What anime has Titans?", a:"Attack on Titan", o:["Bleach","Attack on Titan","Naruto","Demon Slayer"]},
+  {q:"Who uses a water breathing sword?", a:"Tanjiro", o:["Levi","Tanjiro","Ichigo","Asta"]},
+  {q:"What's Deku's real name?", a:"Izuku Midoriya", o:["Deku","Izuku Midoriya","Katsuki","Shigaraki"]},
+  {q:"What anime has Bankai?", a:"Bleach", o:["One Piece","Bleach","AOT","JJK"]},
+  {q:"Who is Gojo's student?", a:"Yuji Itadori", o:["Megumi","Yuji Itadori","Sukuna","Yuta"]},
+  // ... (your other 30 questions stay unchanged)
+];
+
+// ===============================
+//   NEW VARIABLES FOR STREAK
+// ===============================
+let index = 0;
+let streak = 0;
+let highestStreak = localStorage.getItem("animeQuizStreak") || 0;
+
+// Put streak display on screen
+document.addEventListener("DOMContentLoaded", () => {
+  const box = document.querySelector(".container");
+  const streakBox = document.createElement("p");
+  streakBox.id = "streakBox";
+  streakBox.style.marginTop = "20px";
+  streakBox.style.fontSize = "18px";
+  streakBox.innerHTML = `
+    Current Streak: <span id="currentStreak">${streak}</span><br>
+    Highest Streak: <span id="highStreak">${highestStreak}</span>
+  `;
+  box.appendChild(streakBox);
+});
+
+// Explosion effect DIV
+const explosion = document.createElement("div");
+explosion.id = "explosionEffect";
+explosion.style.position = "fixed";
+explosion.style.top = "0";
+explosion.style.left = "0";
+explosion.style.width = "100%";
+explosion.style.height = "100%";
+explosion.style.background = "radial-gradient(circle, #00eaff, #005577, #000)";
+explosion.style.display = "none";
+explosion.style.zIndex = "9999";
+explosion.style.animation = "explode 0.6s ease-out";
+document.body.appendChild(explosion);
+
+// Explosion Keyframe
+const style = document.createElement("style");
+style.innerHTML = `
+@keyframes explode {
+  0% { opacity: 0; transform: scale(0.5); filter:brightness(1.2); }
+  50% { opacity: 1; transform: scale(1.4); filter:brightness(2); }
+  100% { opacity: 0; transform: scale(2); filter:brightness(1); }
+}`;
+document.head.appendChild(style);
+
+// ===============================
+//      LOAD QUESTION
+// ===============================
+function load() {
+  document.getElementById("celebrate").style.display = "none";
+  let q = questions[index];
+  document.getElementById("question").innerText = q.q;
+
+  let box = document.getElementById("options");
+  box.innerHTML = "";
+  q.o.forEach(op => {
+    let btn = document.createElement("div");
+    btn.className = "option";
+    btn.innerText = op;
+    btn.onclick = () => check(op);
+    box.appendChild(btn);
+  });
+}
+
+// ===============================
+//      CHECK ANSWER
+// ===============================
+function check(choice) {
+  let correct = questions[index].a;
+  let result = document.getElementById("result");
+
+  if (choice === correct) {
+    result.style.color = "lime";
+    result.innerText = "Good";
+    streak++;
+
+    // Update streak display
+    document.getElementById("currentStreak").innerText = streak;
+
+    // Celebration at 4 streak (Sugoi!)
+    if (streak === 4) {
+      document.getElementById("celebrate").style.display = "block";
+    }
+
+    // NEW: Beat highest streak?
+    if (streak > highestStreak) {
+      highestStreak = streak;
+      localStorage.setItem("animeQuizStreak", highestStreak);
+      document.getElementById("highStreak").innerText = highestStreak;
+      triggerExplosion();
+    }
+
+  } else {
+    result.style.color = "red";
+    result.innerText = "Try Again";
+    streak = 0;
+    document.getElementById("currentStreak").innerText = 0;
+  }
+}
+
+// ===============================
+//   EXPLOSION CELEBRATION
+// ===============================
+function triggerExplosion() {
+  explosion.style.display = "block";
+  setTimeout(() => {
+    explosion.style.display = "none";
+  }, 600);
+}
+
+// ===============================
+//      NEXT QUESTION
+// ===============================
+function nextQuestion() {
+  index++;
+  if (index >= questions.length) index = 0;
+
+  document.getElementById("result").innerText = "";
+  load();
+}
+
+load();
+</script>
